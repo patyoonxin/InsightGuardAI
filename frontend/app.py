@@ -35,6 +35,18 @@ st.set_page_config(
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
+
+.ms {
+    font-family: 'Material Symbols Outlined';
+    font-style: normal;
+    font-weight: normal;
+    display: inline-block;
+    line-height: 1;
+    vertical-align: middle;
+    font-size: 1.1em;
+    user-select: none;
+}
 
 /* ── Reset & base ── */
 *, *::before, *::after { box-sizing: border-box; }
@@ -223,7 +235,15 @@ hr { border-color: #e8eaed !important; margin: 1.25rem 0 !important; }
 }
 [data-testid="stBaseButton-primary"]:hover {
     background-color: #1a2230 !important;
+    color: #D3D3D3 !important;
 }
+[data-testid="stBaseButton-primary"] p,
+[data-testid="stBaseButton-primary"] span {
+    color: #ffffff !important;
+}
+
+
+
 [data-testid="stBaseButton-secondary"] {
     background-color: #ffffff !important;
     color: #0d1117 !important;
@@ -362,9 +382,9 @@ with st.sidebar:
 
     backend_ok = check_backend()
     if backend_ok:
-        st.success("Backend connected", icon="✅")
+        st.success("Backend connected")
     else:
-        st.error("Backend offline", icon="🔴")
+        st.error("Backend offline", icon=":material/cancel:")
         st.code("uvicorn backend.main:app --reload", language="bash")
 
     st.markdown("")
@@ -430,7 +450,11 @@ if page == "Executive Overview":
     # ── Domain Risk Cards ─────────────────────────────────────────────────────
     st.markdown('<p class="section-header">Domain Risk Overview</p>', unsafe_allow_html=True)
     cols = st.columns(3)
-    domain_icons = {"Finance": "💰", "Operations": "⚙️", "Customer": "👥"}
+    domain_icons = {
+        "Finance":    '<span class="ms">payments</span>',
+        "Operations": '<span class="ms">precision_manufacturing</span>',
+        "Customer":   '<span class="ms">group</span>',
+    }
 
     for i, d in enumerate(risk_data["domains"]):
         with cols[i]:
@@ -440,7 +464,7 @@ if page == "Executive Overview":
             <div class="domain-card">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
                     <div style="font-size:0.95rem;font-weight:600;color:#374151;letter-spacing:-0.01em;">
-                        {domain_icons.get(d['domain'],'📊')}&nbsp; {d['domain']}
+                        {domain_icons.get(d['domain'], '<span class="ms">bar_chart</span>')}&nbsp; {d['domain']}
                     </div>
                     <div style="font-size:0.7rem;font-weight:500;color:{color};background:{color}18;padding:2px 8px;border-radius:20px;border:1px solid {color}30;">
                         Risk Score
@@ -465,7 +489,7 @@ if page == "Executive Overview":
         for i, item in enumerate(tva):
             with tva_cols[i]:
                 delta_val   = item["gap_pct"]
-                status_icon = {"on_track": "✅", "warning": "⚠️", "critical": "🔴"}.get(item["status"], "")
+                status_icon = {"on_track": "✓", "warning": "⚠", "critical": "✕"}.get(item["status"], "")
                 st.metric(
                     label=f"{status_icon} {item['label']}",
                     value=fmt_value(item["actual"], item["unit"]),
@@ -562,7 +586,7 @@ if page == "Executive Overview":
 DOMAIN_CONFIG = {
     "Finance": {
         "key": "finance",
-        "icon": "💰",
+        "icon": '<span class="ms">payments</span>',
         "metrics": [
             ("revenue",           "Revenue",           "USD"),
             ("gross_margin_pct",  "Gross Margin",      "%"),
@@ -575,7 +599,7 @@ DOMAIN_CONFIG = {
     },
     "Operations": {
         "key": "operations",
-        "icon": "⚙️",
+        "icon": '<span class="ms">precision_manufacturing</span>',
         "metrics": [
             ("oee_pct",              "OEE",              "%"),
             ("defect_rate_pct",      "Defect Rate",      "%"),
@@ -588,7 +612,7 @@ DOMAIN_CONFIG = {
     },
     "Customer": {
         "key": "customer",
-        "icon": "👥",
+        "icon": '<span class="ms">group</span>',
         "metrics": [
             ("nps",                      "NPS",               " pts"),
             ("csat",                     "CSAT",              "/5"),
@@ -950,7 +974,7 @@ elif page == "AI Briefing":
         st.markdown(f"""
         <div style="margin-bottom:16px;">
             <span class="source-tag">
-                ⚡ Source: <strong style="color:{source_color};">{r.get('source','Unknown')}</strong>
+                <span class="ms" style="font-size:1em;">bolt</span> Source: <strong style="color:{source_color};">{r.get('source','Unknown')}</strong>
             </span>
         </div>
         """, unsafe_allow_html=True)
@@ -979,7 +1003,7 @@ elif page == "AI Briefing":
         st.divider()
         st.markdown('<p class="section-header">Export Report</p>', unsafe_allow_html=True)
 
-        export_col, spacer_col = st.columns([1, 3])
+        export_col, _ = st.columns([1, 3])
         with export_col:
             with st.spinner("Preparing PDF…"):
                 try:
@@ -990,7 +1014,7 @@ elif page == "AI Briefing":
                     )
                     filename = f"InsightGuardAI_Briefing_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
                     st.download_button(
-                        label="⬇ Download PDF Report",
+                        label="Download PDF Report",
                         data=pdf_bytes,
                         file_name=filename,
                         mime="application/pdf",
@@ -999,11 +1023,7 @@ elif page == "AI Briefing":
                     )
                 except Exception as e:
                     st.error(f"PDF generation failed: {e}")
-        with spacer_col:
-            st.caption(
-                "Downloads a formatted PDF containing the AI briefing, risk assessment, "
-                "and supporting anomaly data table."
-            )
+
 
     else:
         st.info("Click **Generate AI Briefing** to run the analysis.")
