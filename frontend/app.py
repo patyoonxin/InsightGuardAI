@@ -8,6 +8,19 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime
+import io
+import re
+import textwrap
+
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.lib import colors
+from reportlab.platypus import (
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+    HRFlowable, KeepTogether,
+)
+from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
 
 # ── Config ────────────────────────────────────────────────────────────────────
 API_BASE = "http://localhost:8000"
@@ -695,6 +708,201 @@ def render_domain_page(domain_name: str):
         st.dataframe(anom_df, use_container_width=True, hide_index=True)
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# PDF EXPORT HELPER
+# ══════════════════════════════════════════════════════════════════════════════
+
+def generate_pdf_report(briefing_text: str, source: str, anomalies: list) -> bytes:
+    """Generate a PDF executive briefing report and return as bytes."""
+    buffer = io.BytesIO()
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=2 * cm,
+        rightMargin=2 * cm,
+        topMargin=2 * cm,
+        bottomMargin=2 * cm,
+    )
+
+    # ── Styles ─────────────────────────────────────────────────────────────────
+    base_styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle(
+        "ReportTitle",
+        parent=base_styles["Heading1"],
+        fontSize=22,
+        textColor=colors.HexColor("#1e293b"),
+        spaceAfter=4,
+        alignment=TA_LEFT,
+        fontName="Helvetica-Bold",
+    )
+    subtitle_style = ParagraphStyle(
+        "ReportSubtitle",
+        parent=base_styles["Normal"],
+        fontSize=10,
+        textColor=colors.HexColor("#64748b"),
+        spaceAfter=2,
+        fontName="Helvetica",
+    )
+    section_style = ParagraphStyle(
+        "SectionHeader",
+        parent=base_styles["Heading2"],
+        fontSize=13,
+        textColor=colors.HexColor("#0f172a"),
+        spaceBefore=14,
+        spaceAfter=6,
+        fontName="Helvetica-Bold",
+    )
+    body_style = ParagraphStyle(
+        "BodyText",
+        parent=base_styles["Normal"],
+        fontSize=10,
+        leading=15,
+        textColor=colors.HexColor("#334155"),
+        spaceAfter=6,
+        fontName="Helvetica",
+    )
+    bold_body_style = ParagraphStyle(
+        "BoldBody",
+        parent=body_style,
+        fontName="Helvetica-Bold",
+        textColor=colors.HexColor("#1e293b"),
+    )
+    table_header_style = ParagraphStyle(
+        "TableHeader",
+        parent=base_styles["Normal"],
+        fontSize=9,
+        textColor=colors.white,
+        fontName="Helvetica-Bold",
+        alignment=TA_CENTER,
+    )
+    table_cell_style = ParagraphStyle(
+        "TableCell",
+        parent=base_styles["Normal"],
+        fontSize=9,
+        textColor=colors.HexColor("#1e293b"),
+        fontName="Helvetica",
+        alignment=TA_LEFT,
+    )
+    footer_style = ParagraphStyle(
+        "Footer",
+        parent=base_styles["Normal"],
+        fontSize=8,
+        textColor=colors.HexColor("#94a3b8"),
+        alignment=TA_RIGHT,
+        fontName="Helvetica",
+    )
+
+    SEVERITY_COLORS = {
+        "CRITICAL": colors.HexColor("#dc2626"),
+        "HIGH":     colors.HexColor("#ea580c"),
+        "MEDIUM":   colors.HexColor("#d97706"),
+        "LOW":      colors.HexColor("#16a34a"),
+    }
+
+    # ── Parse markdown into reportlab elements ─────────────────────────────────
+    def md_to_elements(text: str, body_st, section_st):
+        elems = []
+        for line in text.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                elems.append(Spacer(1, 4))
+                continue
+            # H2 heading (## or **)
+            if stripped.startswith("## "):
+                elems.append(Paragraph(stripped[3:], section_st))
+            elif stripped.startswith("# "):
+                elems.append(Paragraph(stripped[2:], section_st))
+            elif re.match(r"^\*\*(.+)\*\*$", stripped):
+                heading_text = re.sub(r"^\*\*|\*\*$", "", stripped)
+                elems.append(Paragraph(heading_text, bold_body_style))
+            elif stripped.startswith("- ") or stripped.startswith("* "):
+                # Bullet — convert inline **bold**
+                item = stripped[2:]
+                item = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", item)
+                elems.append(Paragraph(f"• &nbsp; {item}", body_st))
+            elif re.match(r"^\d+\.", stripped):
+                # Numbered list
+                item = re.sub(r"^\d+\.\s*", "", stripped)
+                item = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", item)
+                elems.append(Paragraph(item, body_st))
+            else:
+                # Normal paragraph — convert inline **bold**
+                para = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", stripped)
+                elems.append(Paragraph(para, body_st))
+        return elems
+
+    # ── Build document elements ────────────────────────────────────────────────
+    elements = []
+    generated_at = datetime.now().strftime("%B %d, %Y at %H:%M")
+
+    # Header block
+    elements.append(Paragraph("InsightGuardAI", title_style))
+    elements.append(Paragraph("Executive KPI Briefing Report", subtitle_style))
+    elements.append(Paragraph(f"Generated: {generated_at}  |  Source: {source}", subtitle_style))
+    elements.append(Spacer(1, 6))
+    elements.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor("#3b82f6")))
+    elements.append(Spacer(1, 10))
+
+    # AI briefing body
+    elements += md_to_elements(briefing_text, body_style, section_style)
+
+    elements.append(Spacer(1, 12))
+    elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#e2e8f0")))
+    elements.append(Spacer(1, 8))
+
+    # Supporting anomaly table
+    if anomalies:
+        elements.append(Paragraph("Supporting Anomaly Data", section_style))
+        elements.append(Spacer(1, 4))
+
+        col_headers = ["Domain", "Metric", "Date", "Severity", "Deviation", "Risk Score"]
+        table_data = [[Paragraph(h, table_header_style) for h in col_headers]]
+
+        for a in anomalies:
+            sev = a.get("severity", "").upper()
+            sev_color = SEVERITY_COLORS.get(sev, colors.HexColor("#64748b"))
+            sev_para = Paragraph(
+                f'<font color="{sev_color.hexval() if hasattr(sev_color,"hexval") else "#64748b"}"><b>{sev}</b></font>',
+                table_cell_style,
+            )
+            table_data.append([
+                Paragraph(a.get("domain", ""), table_cell_style),
+                Paragraph(a.get("metric_label", ""), table_cell_style),
+                Paragraph(a.get("date", ""), table_cell_style),
+                Paragraph(f"<b>{sev}</b>", table_cell_style),
+                Paragraph(f"{a.get('deviation_pct', 0):+.1f}%", table_cell_style),
+                Paragraph(str(a.get("risk_score", "")), table_cell_style),
+            ])
+
+        col_widths = [3.0*cm, 5.2*cm, 2.4*cm, 2.2*cm, 2.4*cm, 2.4*cm]
+        tbl = Table(table_data, colWidths=col_widths, repeatRows=1)
+        tbl.setStyle(TableStyle([
+            ("BACKGROUND",  (0, 0), (-1, 0), colors.HexColor("#1e293b")),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#f8fafc"), colors.white]),
+            ("GRID",        (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+            ("TOPPADDING",  (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+            ("VALIGN",      (0, 0), (-1, -1), "MIDDLE"),
+        ]))
+        elements.append(KeepTogether([tbl]))
+
+    elements.append(Spacer(1, 16))
+    elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#e2e8f0")))
+    elements.append(Spacer(1, 4))
+    elements.append(Paragraph(
+        f"InsightGuardAI  •  Confidential  •  {generated_at}",
+        footer_style,
+    ))
+
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer.read()
+
+
 if page in DOMAIN_CONFIG:
     render_domain_page(page)
 
@@ -764,5 +972,38 @@ elif page == "AI Briefing":
                 "Risk Score": a["risk_score"],
             } for a in anoms_all])
             st.dataframe(supp_df, use_container_width=True, hide_index=True)
+        else:
+            anoms_all = []
+
+        # ── Export to PDF ─────────────────────────────────────────────────────
+        st.divider()
+        st.markdown('<p class="section-header">Export Report</p>', unsafe_allow_html=True)
+
+        export_col, spacer_col = st.columns([1, 3])
+        with export_col:
+            with st.spinner("Preparing PDF…"):
+                try:
+                    pdf_bytes = generate_pdf_report(
+                        briefing_text=r.get("text", ""),
+                        source=r.get("source", "Unknown"),
+                        anomalies=anoms_all if isinstance(anoms_all, list) else [],
+                    )
+                    filename = f"InsightGuardAI_Briefing_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+                    st.download_button(
+                        label="⬇ Download PDF Report",
+                        data=pdf_bytes,
+                        file_name=filename,
+                        mime="application/pdf",
+                        use_container_width=True,
+                        type="primary",
+                    )
+                except Exception as e:
+                    st.error(f"PDF generation failed: {e}")
+        with spacer_col:
+            st.caption(
+                "Downloads a formatted PDF containing the AI briefing, risk assessment, "
+                "and supporting anomaly data table."
+            )
+
     else:
         st.info("Click **Generate AI Briefing** to run the analysis.")
