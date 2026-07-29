@@ -14,7 +14,6 @@ API_BASE = "http://localhost:8000"
 
 st.set_page_config(
     page_title="InsightGuardAI",
-    page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -22,64 +21,233 @@ st.set_page_config(
 # ── Styling ───────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-/* Main background */
-[data-testid="stAppViewContainer"] { background-color: #0f1117; }
-[data-testid="stSidebar"]          { background-color: #161b22; border-right: 1px solid #21262d; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* Metric cards */
+/* ── Reset & base ── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
+    background-color: #ffffff !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ── Sidebar ── */
+[data-testid="stSidebar"] {
+    background-color: #f8f9fb !important;
+    border-right: 1px solid #e8eaed !important;
+}
+[data-testid="stSidebar"] * { font-family: 'Inter', sans-serif; }
+[data-testid="stSidebarNav"] { padding-top: 0; }
+
+/* Hide the sidebar collapse toggle button */
+[data-testid="stSidebarCollapseButton"],
+button[kind="header"],
+[data-testid="collapsedControl"] {
+    display: none !important;
+}
+
+/* ── Main content padding ── */
+[data-testid="stMainBlockContainer"] { padding-top: 2rem; }
+
+/* ── Typography ── */
+h1 { font-size: 2rem    !important; font-weight: 700 !important; color: #0d1117 !important; letter-spacing: -0.02em; margin-bottom: 0.2rem !important; }
+h2 { font-size: 1.5rem  !important; font-weight: 600 !important; color: #0d1117 !important; }
+h3 { font-size: 1.2rem  !important; font-weight: 600 !important; color: #0d1117 !important; letter-spacing: -0.01em; }
+p, li, label { color: #5c6370 !important; font-size: 1rem; }
+
+/* ── Metric cards ── */
 div[data-testid="metric-container"] {
-    background: #161b22;
-    border: 1px solid #21262d;
-    border-radius: 8px;
-    padding: 12px 16px;
+    background: #ffffff;
+    border: 1px solid #e8eaed;
+    border-radius: 10px;
+    padding: 16px 20px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: box-shadow 0.15s ease;
+}
+div[data-testid="metric-container"]:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+div[data-testid="metric-container"] [data-testid="stMetricLabel"] {
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #8a909a !important;
+}
+div[data-testid="metric-container"] [data-testid="stMetricValue"] {
+    font-size: 2rem !important;
+    font-weight: 700 !important;
+    color: #0d1117 !important;
+}
+div[data-testid="metric-container"] [data-testid="stMetricDelta"] {
+    font-size: 0.95rem !important;
+    font-weight: 500 !important;
 }
 
-/* Headers */
-h1, h2, h3 { color: #e6edf3 !important; }
-p, li       { color: #8b949e !important; }
+/* ── Divider ── */
+hr { border-color: #e8eaed !important; margin: 1.25rem 0 !important; }
 
-/* Severity badges */
-.badge-critical { background:#da3633; color:#fff; padding:2px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; }
-.badge-high     { background:#d29922; color:#fff; padding:2px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; }
-.badge-medium   { background:#388bfd; color:#fff; padding:2px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; }
-.badge-low      { background:#3fb950; color:#fff; padding:2px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; }
+/* ── Severity badges ── */
+.badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.badge-critical { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.badge-high     { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+.badge-medium   { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.badge-low      { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
 
-/* Alert card */
+/* ── Alert card ── */
 .alert-card {
-    background: #161b22;
-    border-left: 4px solid #da3633;
-    border-radius: 6px;
-    padding: 12px 16px;
-    margin-bottom: 10px;
-}
-.alert-card-high   { border-left-color: #d29922; }
-.alert-card-medium { border-left-color: #388bfd; }
-.alert-card-low    { border-left-color: #3fb950; }
-
-/* AI analysis card */
-.ai-card {
-    background: #161b22;
-    border: 1px solid #21262d;
+    background: #ffffff;
+    border: 1px solid #e8eaed;
+    border-left: 3px solid #b91c1c;
     border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 8px;
+    transition: box-shadow 0.15s ease;
+}
+.alert-card:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.07); }
+.alert-card-high   { border-left-color: #b45309; }
+.alert-card-medium { border-left-color: #1d4ed8; }
+.alert-card-low    { border-left-color: #15803d; }
+
+/* ── Domain card ── */
+.domain-card {
+    background: #ffffff;
+    border: 1px solid #e8eaed;
+    border-radius: 10px;
     padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: box-shadow 0.15s ease;
+    height: 100%;
+}
+.domain-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.08); }
+
+/* ── AI analysis card ── */
+.ai-card {
+    background: #f8f9fb;
+    border: 1px solid #e8eaed;
+    border-radius: 10px;
+    padding: 22px;
 }
 
-/* Source tag */
+/* ── Source tag ── */
 .source-tag {
-    display:inline-block;
-    background:#21262d;
-    color:#8b949e;
-    font-size:0.72rem;
-    padding:2px 8px;
-    border-radius:12px;
-    margin-bottom:12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f3f4f6;
+    color: #374151;
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid #e5e7eb;
+    margin-bottom: 16px;
 }
 
-/* Risk score bar */
-.risk-bar-wrap { background:#21262d; border-radius:4px; height:8px; width:100%; margin-top:4px; }
-.risk-bar      { border-radius:4px; height:8px; }
+/* ── Risk score bar ── */
+.risk-bar-wrap { background: #f1f3f4; border-radius: 4px; height: 6px; width: 100%; margin-top: 8px; }
+.risk-bar      { border-radius: 4px; height: 6px; }
+
+/* ── Section header ── */
+.section-header {
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8a909a;
+    margin-bottom: 12px;
+}
+
+/* ── Page header strip ── */
+.page-header {
+    padding-bottom: 14px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid #e8eaed;
+}
+.page-header h1 { margin-bottom: 2px !important; }
+.page-header p  { margin: 0; color: #8a909a !important; font-size: 0.85rem; }
+
+/* ── Sidebar logo area ── */
+.sidebar-brand {
+    padding: 8px 4px 16px;
+}
+.sidebar-brand .brand-name {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #0d1117;
+    letter-spacing: -0.02em;
+}
+.sidebar-brand .brand-sub {
+    font-size: 0.85rem;
+    color: #8a909a;
+    margin-top: 2px;
+}
+
+/* ── Nav radio ── */
+[data-testid="stRadio"] label {
+    font-size: 1rem !important;
+    font-weight: 500 !important;
+    color: #374151 !important;
+}
+
+/* ── Buttons ── */
+[data-testid="stBaseButton-primary"] {
+    background-color: #0d1117 !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 7px !important;
+    font-weight: 600 !important;
+    font-size: 1rem !important;
+    transition: background 0.15s ease !important;
+}
+[data-testid="stBaseButton-primary"]:hover {
+    background-color: #1a2230 !important;
+}
+[data-testid="stBaseButton-secondary"] {
+    background-color: #ffffff !important;
+    color: #0d1117 !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 7px !important;
+    font-weight: 500 !important;
+    font-size: 1rem !important;
+}
+[data-testid="stBaseButton-secondary"]:hover {
+    background-color: #f8f9fb !important;
+    border-color: #9ca3af !important;
+}
+
+/* ── Dataframe / table ── */
+[data-testid="stDataFrame"] {
+    border: 1px solid #e8eaed !important;
+    border-radius: 8px !important;
+    overflow: hidden;
+}
+
+/* ── Info / warning / error banners ── */
+[data-testid="stAlert"] {
+    border-radius: 8px !important;
+    font-size: 1rem !important;
+}
+
+/* ── Spinner ── */
+[data-testid="stSpinner"] { color: #0d1117 !important; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f3f4; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 </style>
 """, unsafe_allow_html=True)
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -103,14 +271,19 @@ def post(endpoint: str, body: dict = {}):
 
 
 def severity_color(s: str):
-    return {"critical": "#da3633", "high": "#d29922", "medium": "#388bfd", "low": "#3fb950"}.get(s, "#8b949e")
+    return {
+        "critical": "#b91c1c",
+        "high":     "#b45309",
+        "medium":   "#1d4ed8",
+        "low":      "#15803d",
+    }.get(s, "#6b7280")
 
 
 def risk_score_color(score: int):
-    if score >= 75: return "#da3633"
-    if score >= 55: return "#d29922"
-    if score >= 35: return "#388bfd"
-    return "#3fb950"
+    if score >= 75: return "#b91c1c"
+    if score >= 55: return "#b45309"
+    if score >= 35: return "#1d4ed8"
+    return "#15803d"
 
 
 def fmt_value(v, unit):
@@ -129,11 +302,31 @@ def check_backend():
         return False
 
 
+def plotly_light_layout(**kwargs):
+    """Return a consistent light-theme Plotly layout dict."""
+    base = dict(
+        paper_bgcolor="#ffffff",
+        plot_bgcolor="#ffffff",
+        font=dict(family="Inter, -apple-system, sans-serif", color="#5c6370", size=14),
+        margin=dict(t=44, b=24, l=10, r=10),
+        xaxis=dict(showgrid=False, color="#9ca3af", linecolor="#e8eaed", tickfont_color="#9ca3af"),
+        yaxis=dict(showgrid=True, gridcolor="#f1f3f4", color="#9ca3af", linecolor="#e8eaed", tickfont_color="#9ca3af"),
+        legend=dict(bgcolor="rgba(255,255,255,0)", font_color="#5c6370"),
+    )
+    base.update(kwargs)
+    return base
+
+
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
 with st.sidebar:
-    st.markdown("## 🛡️ InsightGuardAI")
-    st.markdown("*Intelligent Early Warning System*")
+    st.markdown("""
+    <div class="sidebar-brand">
+        <div class="brand-name"> InsightGuardAI</div>
+        <div class="brand-sub">Intelligent Early Warning System</div>
+    </div>
+    """, unsafe_allow_html=True)
+
     st.divider()
 
     page = st.radio(
@@ -144,10 +337,12 @@ with st.sidebar:
 
     st.divider()
 
+    st.markdown('<p class="section-header">Filters</p>', unsafe_allow_html=True)
     severity_filter = st.multiselect(
-        "Severity Filter",
+        "Severity",
         ["critical", "high", "medium", "low"],
         default=["critical", "high"],
+        label_visibility="collapsed",
     )
 
     st.divider()
@@ -156,9 +351,10 @@ with st.sidebar:
     if backend_ok:
         st.success("Backend connected", icon="✅")
     else:
-        st.error("Backend offline — start FastAPI", icon="🔴")
+        st.error("Backend offline", icon="🔴")
         st.code("uvicorn backend.main:app --reload", language="bash")
 
+    st.markdown("")
     if st.button("Regenerate Data", use_container_width=True):
         fetch.clear()
         post("/api/regenerate-data")
@@ -169,12 +365,15 @@ with st.sidebar:
         fetch.clear()
         st.rerun()
 
-    st.markdown(f"<small style='color:#444'>Last refresh: {datetime.now().strftime('%H:%M:%S')}</small>", unsafe_allow_html=True)
+    st.markdown(
+        f"<p style='color:#c0c4cc;font-size:0.72rem;margin-top:12px;'>Last refresh: {datetime.now().strftime('%H:%M:%S')}</p>",
+        unsafe_allow_html=True,
+    )
 
 
 # ── Backend check gate ────────────────────────────────────────────────────────
 if not backend_ok:
-    st.warning("⚠️ Backend is not running. Please start the FastAPI server first.")
+    st.warning("Backend is not running. Please start the FastAPI server first.")
     st.stop()
 
 
@@ -183,8 +382,12 @@ if not backend_ok:
 # ══════════════════════════════════════════════════════════════════════════════
 
 if page == "Executive Overview":
-    st.markdown("# Executive Overview")
-    st.markdown("*Real-time KPI health across Finance, Operations & Customer domains*")
+    st.markdown("""
+    <div class="page-header">
+        <h1>Executive Overview</h1>
+        <p>Real-time KPI health across Finance, Operations &amp; Customer domains</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     risk_data     = fetch("/api/risk-summary")
     anomalies_all = fetch("/api/anomalies?limit=100")
@@ -198,8 +401,9 @@ if page == "Executive Overview":
     col1, col2, col3, col4 = st.columns(4)
     score = risk_data["overall_risk_score"]
     score_color = risk_score_color(score)
+
     with col1:
-        st.metric("Overall Risk Score", f"{score}/100", delta=None)
+        st.metric("Overall Risk Score", f"{score}/100")
     with col2:
         st.metric("Total Anomalies", risk_data["total_anomalies"])
     with col3:
@@ -211,36 +415,43 @@ if page == "Executive Overview":
     st.divider()
 
     # ── Domain Risk Cards ─────────────────────────────────────────────────────
-    st.markdown("### Domain Risk Overview")
+    st.markdown('<p class="section-header">Domain Risk Overview</p>', unsafe_allow_html=True)
     cols = st.columns(3)
     domain_icons = {"Finance": "💰", "Operations": "⚙️", "Customer": "👥"}
 
     for i, d in enumerate(risk_data["domains"]):
         with cols[i]:
-            rs = d["top_risk_score"]
+            rs    = d["top_risk_score"]
             color = risk_score_color(rs)
             st.markdown(f"""
-            <div style="background:#161b22;border:1px solid #21262d;border-radius:8px;padding:16px;">
-                <div style="font-size:1.3rem;margin-bottom:4px;">{domain_icons.get(d['domain'],'📊')} {d['domain']}</div>
-                <div style="font-size:2rem;font-weight:700;color:{color};">{rs}<span style="font-size:1rem;color:#8b949e;">/100</span></div>
+            <div class="domain-card">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+                    <div style="font-size:0.95rem;font-weight:600;color:#374151;letter-spacing:-0.01em;">
+                        {domain_icons.get(d['domain'],'📊')}&nbsp; {d['domain']}
+                    </div>
+                    <div style="font-size:0.7rem;font-weight:500;color:{color};background:{color}18;padding:2px 8px;border-radius:20px;border:1px solid {color}30;">
+                        Risk Score
+                    </div>
+                </div>
+                <div style="font-size:2.2rem;font-weight:700;color:{color};line-height:1;">{rs}<span style="font-size:0.9rem;font-weight:400;color:#9ca3af;">&thinsp;/100</span></div>
                 <div class="risk-bar-wrap"><div class="risk-bar" style="width:{rs}%;background:{color};"></div></div>
-                <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-                    <span class="badge-critical">{d['critical']} Critical</span>
-                    <span class="badge-high">{d['high']} High</span>
-                    <span class="badge-medium">{d['medium']} Med</span>
+                <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;">
+                    <span class="badge badge-critical">{d['critical']} Critical</span>
+                    <span class="badge badge-high">{d['high']} High</span>
+                    <span class="badge badge-medium">{d['medium']} Med</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
     st.divider()
 
-    # ── Target vs Actual ─────────────────────────────────────────────────────
+    # ── Target vs Actual ──────────────────────────────────────────────────────
     if tva and not isinstance(tva, dict):
-        st.markdown("### Target vs Actual Performance")
+        st.markdown('<p class="section-header">Target vs Actual Performance</p>', unsafe_allow_html=True)
         tva_cols = st.columns(len(tva))
         for i, item in enumerate(tva):
             with tva_cols[i]:
-                delta_val = item["gap_pct"]
+                delta_val   = item["gap_pct"]
                 status_icon = {"on_track": "✅", "warning": "⚠️", "critical": "🔴"}.get(item["status"], "")
                 st.metric(
                     label=f"{status_icon} {item['label']}",
@@ -250,9 +461,12 @@ if page == "Executive Overview":
                 )
         st.divider()
 
-    # ── Critical Alerts ───────────────────────────────────────────────────────
-    st.markdown("### Active Alerts")
-    filtered_anoms = [a for a in anomalies_all if a["severity"] in severity_filter] if not isinstance(anomalies_all, dict) else []
+    # ── Active Alerts ─────────────────────────────────────────────────────────
+    st.markdown('<p class="section-header">Active Alerts</p>', unsafe_allow_html=True)
+    filtered_anoms = (
+        [a for a in anomalies_all if a["severity"] in severity_filter]
+        if not isinstance(anomalies_all, dict) else []
+    )
 
     if not filtered_anoms:
         st.info("No anomalies match the current severity filter.")
@@ -264,56 +478,66 @@ if page == "Executive Overview":
             st.markdown(f"""
             <div class="alert-card alert-card-{sev}">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <div>
-                        <span class="badge-{sev}">{sev.upper()}</span>
-                        <span style="color:#e6edf3;font-weight:600;margin-left:8px;">{a['domain']} — {a['metric_label']}</span>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span class="badge badge-{sev}">{sev.upper()}</span>
+                        <span style="font-size:1rem;font-weight:600;color:#0d1117;">{a['domain']} — {a['metric_label']}</span>
                     </div>
-                    <div style="color:#8b949e;font-size:0.8rem;">{a['date']}</div>
+                    <div style="font-size:0.9rem;color:#9ca3af;">{a['date']}</div>
                 </div>
-                <div style="margin-top:6px;color:#8b949e;">
-                    {dir_sym} <strong style="color:{color};">{fmt_value(a['value'], a['unit'])}</strong>
-                    &nbsp;vs expected <strong>{fmt_value(a['expected'], a['unit'])}</strong>
-                    &nbsp;·&nbsp; <span style="color:{color};">{a['deviation_pct']:+.1f}%</span>
-                    &nbsp;·&nbsp; Risk Score: <strong style="color:{color};">{a['risk_score']}</strong>
+                <div style="margin-top:7px;font-size:0.95rem;color:#5c6370;">
+                    {dir_sym}&nbsp;<strong style="color:{color};">{fmt_value(a['value'], a['unit'])}</strong>
+                    &nbsp;vs expected&nbsp;<strong style="color:#374151;">{fmt_value(a['expected'], a['unit'])}</strong>
+                    &nbsp;·&nbsp;<span style="color:{color};font-weight:500;">{a['deviation_pct']:+.1f}%</span>
+                    &nbsp;·&nbsp;Risk&nbsp;<strong style="color:{color};">{a['risk_score']}</strong>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-    # ── Anomaly Count by Domain Chart ─────────────────────────────────────────
+    # ── Anomaly Distribution Charts ───────────────────────────────────────────
     if filtered_anoms:
         st.divider()
-        st.markdown("### Anomaly Distribution")
+        st.markdown('<p class="section-header">Anomaly Distribution</p>', unsafe_allow_html=True)
         chart_col1, chart_col2 = st.columns(2)
 
         with chart_col1:
             domain_counts = pd.DataFrame(filtered_anoms).groupby("domain").size().reset_index(name="count")
             fig = px.bar(
                 domain_counts, x="domain", y="count", color="domain",
-                color_discrete_map={"Finance": "#388bfd", "Operations": "#d29922", "Customer": "#3fb950"},
-                title="Anomaly Count by Domain",
+                color_discrete_map={
+                    "Finance":    "#3b82f6",
+                    "Operations": "#f59e0b",
+                    "Customer":   "#10b981",
+                },
+                title="Anomalies by Domain",
             )
             fig.update_layout(
-                paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
-                font_color="#8b949e", showlegend=False,
-                title_font_color="#e6edf3",
-                xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor="#21262d"),
-                margin=dict(t=40, b=20),
+                **plotly_light_layout(showlegend=False),
+                title_font=dict(size=13, color="#0d1117", family="Inter"),
             )
+            fig.update_traces(marker_line_width=0)
             st.plotly_chart(fig, use_container_width=True)
 
         with chart_col2:
-            sev_counts = pd.DataFrame(filtered_anoms).groupby("severity").size().reset_index(name="count")
-            sev_color_map = {"critical": "#da3633", "high": "#d29922", "medium": "#388bfd", "low": "#3fb950"}
+            sev_counts    = pd.DataFrame(filtered_anoms).groupby("severity").size().reset_index(name="count")
+            sev_color_map = {
+                "critical": "#ef4444",
+                "high":     "#f59e0b",
+                "medium":   "#3b82f6",
+                "low":      "#10b981",
+            }
             fig2 = px.pie(
                 sev_counts, names="severity", values="count",
                 color="severity", color_discrete_map=sev_color_map,
                 title="Severity Breakdown",
-                hole=0.5,
+                hole=0.55,
             )
             fig2.update_layout(
-                paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
-                font_color="#8b949e", title_font_color="#e6edf3",
-                margin=dict(t=40, b=20),
+                **plotly_light_layout(),
+                title_font=dict(size=13, color="#0d1117", family="Inter"),
+            )
+            fig2.update_traces(
+                textfont_size=12,
+                marker=dict(line=dict(color="#ffffff", width=2)),
             )
             st.plotly_chart(fig2, use_container_width=True)
 
@@ -334,7 +558,7 @@ DOMAIN_CONFIG = {
             ("cash_balance",      "Cash Balance",      "USD"),
         ],
         "target_pairs": [("revenue", "revenue_target", "Revenue Target")],
-        "color": "#388bfd",
+        "color": "#3b82f6",
     },
     "Operations": {
         "key": "operations",
@@ -347,7 +571,7 @@ DOMAIN_CONFIG = {
             ("unit_cost",            "Unit Cost",        " USD"),
         ],
         "target_pairs": [("oee_pct", "oee_target_pct", "OEE Target")],
-        "color": "#d29922",
+        "color": "#f59e0b",
     },
     "Customer": {
         "key": "customer",
@@ -361,14 +585,20 @@ DOMAIN_CONFIG = {
             ("customer_lifetime_value",  "Customer LTV",      " USD"),
         ],
         "target_pairs": [],
-        "color": "#3fb950",
+        "color": "#10b981",
     },
 }
 
 
 def render_domain_page(domain_name: str):
     cfg = DOMAIN_CONFIG[domain_name]
-    st.markdown(f"# {cfg['icon']} {domain_name} KPIs")
+
+    st.markdown(f"""
+    <div class="page-header">
+        <h1>{cfg['icon']} {domain_name}</h1>
+        <p>KPI performance, trend analysis and anomaly detection</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     kpis      = fetch(f"/api/kpis/{cfg['key']}")
     anoms_raw = fetch(f"/api/anomalies?domain={domain_name}&limit=50")
@@ -379,26 +609,29 @@ def render_domain_page(domain_name: str):
 
     df = pd.DataFrame(kpis)
     df["date"] = pd.to_datetime(df["date"])
-    anoms = [a for a in anoms_raw if a["severity"] in severity_filter] if not isinstance(anoms_raw, dict) else []
+    anoms = (
+        [a for a in anoms_raw if a["severity"] in severity_filter]
+        if not isinstance(anoms_raw, dict) else []
+    )
 
-    # Latest metrics summary row
+    # ── Latest KPIs ───────────────────────────────────────────────────────────
+    st.markdown('<p class="section-header">Latest KPIs</p>', unsafe_allow_html=True)
     latest = df.iloc[-1]
     prev   = df.iloc[-2] if len(df) > 1 else df.iloc[-1]
+    cols   = st.columns(min(len(cfg["metrics"]), 4))
 
-    st.markdown("### Latest KPIs")
-    cols = st.columns(min(len(cfg["metrics"]), 4))
     for i, (col_name, label, unit) in enumerate(cfg["metrics"][:4]):
         if col_name in df.columns:
-            val  = latest[col_name]
-            pval = prev[col_name]
+            val   = latest[col_name]
+            pval  = prev[col_name]
             delta = round(((val - pval) / abs(pval)) * 100, 1) if pval != 0 else 0
             with cols[i % 4]:
                 st.metric(label, fmt_value(val, unit), delta=f"{delta:+.1f}% MoM")
 
     st.divider()
 
-    # KPI trend charts
-    st.markdown("### Trend Analysis")
+    # ── Trend Analysis ────────────────────────────────────────────────────────
+    st.markdown('<p class="section-header">Trend Analysis</p>', unsafe_allow_html=True)
     metrics_to_plot = cfg["metrics"]
     n_cols = 2
     for row_start in range(0, len(metrics_to_plot), n_cols):
@@ -408,26 +641,27 @@ def render_domain_page(domain_name: str):
             if col_name not in df.columns:
                 continue
             with c[j]:
-                # Mark anomaly dates on chart
                 anom_dates = {a["date"] for a in anoms if a["metric"] == col_name}
-
                 fig = go.Figure()
+
+                # Area fill
+                r, g, b = tuple(int(cfg["color"].lstrip("#")[i:i+2], 16) for i in (0, 2, 4))
                 fig.add_trace(go.Scatter(
                     x=df["date"], y=df[col_name],
                     mode="lines",
                     name=label,
                     line=dict(color=cfg["color"], width=2),
                     fill="tozeroy",
-                    fillcolor=f"rgba{tuple(int(cfg['color'].lstrip('#')[i:i+2],16) for i in (0,2,4)) + (0.07,)}",
+                    fillcolor=f"rgba({r},{g},{b},0.07)",
                 ))
 
-                # Add target line if applicable
+                # Target line
                 for actual_c, target_c, _ in cfg["target_pairs"]:
                     if actual_c == col_name and target_c in df.columns:
                         fig.add_trace(go.Scatter(
                             x=df["date"], y=df[target_c],
                             mode="lines", name="Target",
-                            line=dict(color="#da3633", width=1.5, dash="dash"),
+                            line=dict(color="#ef4444", width=1.5, dash="dash"),
                         ))
 
                 # Anomaly markers
@@ -436,31 +670,26 @@ def render_domain_page(domain_name: str):
                     fig.add_trace(go.Scatter(
                         x=anom_rows["date"], y=anom_rows[col_name],
                         mode="markers", name="Anomaly",
-                        marker=dict(color="#da3633", size=10, symbol="x"),
+                        marker=dict(color="#ef4444", size=9, symbol="x", line=dict(width=2, color="#ef4444")),
                     ))
 
                 fig.update_layout(
-                    title=label, title_font_color="#e6edf3",
-                    paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
-                    font_color="#8b949e", margin=dict(t=40, b=20, l=10, r=10),
-                    xaxis=dict(showgrid=False, color="#8b949e"),
-                    yaxis=dict(showgrid=True, gridcolor="#21262d", color="#8b949e"),
-                    legend=dict(bgcolor="rgba(0,0,0,0)", font_color="#8b949e"),
-                    height=280,
+                    **plotly_light_layout(height=260),
+                    title=dict(text=label, font=dict(size=12, color="#0d1117", family="Inter"), x=0),
                 )
                 st.plotly_chart(fig, use_container_width=True)
 
-    # Domain anomalies table
+    # ── Anomalies Table ───────────────────────────────────────────────────────
     if anoms:
         st.divider()
-        st.markdown(f"### {domain_name} Anomalies ({len(anoms)})")
+        st.markdown(f'<p class="section-header">{domain_name} Anomalies &nbsp;<span style="font-weight:400;color:#9ca3af;">({len(anoms)})</span></p>', unsafe_allow_html=True)
         anom_df = pd.DataFrame([{
-            "Date": a["date"],
-            "Metric": a["metric_label"],
-            "Severity": a["severity"].upper(),
-            "Value": f"{a['value']}{a['unit']}",
-            "Expected": f"{a['expected']}{a['unit']}",
-            "Deviation": f"{a['deviation_pct']:+.1f}%",
+            "Date":       a["date"],
+            "Metric":     a["metric_label"],
+            "Severity":   a["severity"].upper(),
+            "Value":      f"{a['value']}{a['unit']}",
+            "Expected":   f"{a['expected']}{a['unit']}",
+            "Deviation":  f"{a['deviation_pct']:+.1f}%",
             "Risk Score": a["risk_score"],
         } for a in anoms])
         st.dataframe(anom_df, use_container_width=True, hide_index=True)
@@ -475,20 +704,27 @@ if page in DOMAIN_CONFIG:
 # ══════════════════════════════════════════════════════════════════════════════
 
 elif page == "AI Briefing":
-    st.markdown("# 🤖 AI Executive Briefing")
-    st.markdown("*AI-powered root-cause analysis and recommended actions*")
+    st.markdown("""
+    <div class="page-header">
+        <h1>AI Executive Briefing</h1>
+        <p>AI-powered root-cause analysis and recommended actions</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     col_btn, col_info = st.columns([1, 3])
     with col_btn:
         run = st.button("Generate AI Briefing", type="primary", use_container_width=True)
     with col_info:
-        st.caption("Analyses the top anomalies and produces an executive briefing. Uses WorkBuddy MCP → OpenAI → Rule-based fallback.")
+        st.caption(
+            "Analyses the top anomalies and produces an executive briefing. "
+            "Uses WorkBuddy MCP → OpenAI → Rule-based fallback."
+        )
 
     if "ai_result" not in st.session_state:
         st.session_state.ai_result = None
 
     if run:
-        with st.spinner("Analysing anomalies and generating briefing..."):
+        with st.spinner("Analysing anomalies and generating briefing…"):
             result = post("/api/analyse", {"top_n": 8})
             if "error" not in result:
                 st.session_state.ai_result = result
@@ -497,26 +733,34 @@ elif page == "AI Briefing":
 
     if st.session_state.ai_result:
         r = st.session_state.ai_result
-        source_color = {"WorkBuddy MCP": "#3fb950", "OpenAI": "#388bfd", "Rule-based": "#8b949e"}.get(r.get("source", ""), "#8b949e")
+        source_color = {
+            "WorkBuddy MCP": "#15803d",
+            "OpenAI":        "#1d4ed8",
+            "Rule-based":    "#6b7280",
+        }.get(r.get("source", ""), "#6b7280")
+
         st.markdown(f"""
         <div style="margin-bottom:16px;">
-            <span class="source-tag">⚡ Source: <strong style="color:{source_color};">{r.get('source','Unknown')}</strong></span>
+            <span class="source-tag">
+                ⚡ Source: <strong style="color:{source_color};">{r.get('source','Unknown')}</strong>
+            </span>
         </div>
         """, unsafe_allow_html=True)
 
+        st.markdown(f'<div class="ai-card">', unsafe_allow_html=True)
         st.markdown(r.get("text", "No analysis available."))
+        st.markdown("</div>", unsafe_allow_html=True)
 
         st.divider()
-        # Supporting anomaly table
-        st.markdown("### Supporting Anomaly Data")
+        st.markdown('<p class="section-header">Supporting Anomaly Data</p>', unsafe_allow_html=True)
         anoms_all = fetch("/api/anomalies?limit=8")
         if not isinstance(anoms_all, dict):
             supp_df = pd.DataFrame([{
-                "Domain": a["domain"],
-                "Metric": a["metric_label"],
-                "Date": a["date"],
-                "Severity": a["severity"].upper(),
-                "Deviation": f"{a['deviation_pct']:+.1f}%",
+                "Domain":     a["domain"],
+                "Metric":     a["metric_label"],
+                "Date":       a["date"],
+                "Severity":   a["severity"].upper(),
+                "Deviation":  f"{a['deviation_pct']:+.1f}%",
                 "Risk Score": a["risk_score"],
             } for a in anoms_all])
             st.dataframe(supp_df, use_container_width=True, hide_index=True)
