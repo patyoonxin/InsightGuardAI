@@ -155,26 +155,14 @@ OPENAI_BASE_URL=https://api.deepseek.com/v1
 
 ## Running the Application
 
-### Option A — One command (recommended)
-
-From the project root in PowerShell:
-
-```powershell
-.\start.ps1
-```
-
-This opens two new PowerShell windows: one for the backend, one for the frontend.
-
-### Option B — Manual (two terminals)
-
-**Terminal 1 — FastAPI backend:**
+**FastAPI backend:**
 
 ```powershell
 cd InsightGuardAi
 python -m uvicorn backend.main:app --reload --port 8000
 ```
 
-**Terminal 2 — Streamlit frontend:**
+**Streamlit frontend:**
 
 ```powershell
 cd InsightGuardAi
