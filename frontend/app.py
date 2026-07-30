@@ -949,7 +949,7 @@ elif page == "AI Briefing":
     with col_info:
         st.caption(
             "Analyses the top anomalies and produces an executive briefing. "
-            "Uses WorkBuddy MCP → OpenAI → Rule-based fallback."
+            "Uses LLM API (Gemini / OpenAI) → WorkBuddy MCP → Rule-based fallback."
         )
 
     if "ai_result" not in st.session_state:
@@ -979,7 +979,7 @@ elif page == "AI Briefing":
         </div>
         """, unsafe_allow_html=True)
 
-        st.markdown(f'<div class="ai-card">', unsafe_allow_html=True)
+        # st.markdown(f'<div class="ai-card">', unsafe_allow_html=True)
         st.markdown(r.get("text", "No analysis available."))
         st.markdown("</div>", unsafe_allow_html=True)
 
