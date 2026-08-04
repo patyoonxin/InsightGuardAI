@@ -949,7 +949,7 @@ elif page == "AI Briefing":
     with col_info:
         st.caption(
             "Analyses the top anomalies and produces an executive briefing. "
-            "Uses LLM API (Gemini / OpenAI) → WorkBuddy MCP → Rule-based fallback."
+            "Uses LLM API (Gemini) → Rule-based fallback."
         )
 
     if "ai_result" not in st.session_state:
