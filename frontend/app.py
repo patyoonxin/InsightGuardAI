@@ -26,7 +26,7 @@ from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
 # ── Config ────────────────────────────────────────────────────────────────────
 API_BASE = os.getenv(
     "API_URL",
-    "http://localhost:8000"
+    st.secrets.get("API_URL", "http://localhost:8000")
 )
 
 st.set_page_config(
