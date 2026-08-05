@@ -966,9 +966,8 @@ elif page == "AI Briefing":
     if st.session_state.ai_result:
         r = st.session_state.ai_result
         source_color = {
-            "WorkBuddy MCP": "#15803d",
-            "OpenAI":        "#1d4ed8",
-            "Rule-based":    "#6b7280",
+            "Gemini":     "#1d4ed8",
+            "Rule-based": "#6b7280",
         }.get(r.get("source", ""), "#6b7280")
 
         st.markdown(f"""
