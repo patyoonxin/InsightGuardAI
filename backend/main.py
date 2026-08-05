@@ -3,10 +3,11 @@ InsightGuardAI — FastAPI Backend
 Endpoints:
   GET  /health
   GET  /api/kpis/{domain}          — raw KPI time-series
-  GET  /api/anomalies              — all detected anomalies
+  GET  /api/anomalies              — all detected anomalies (enriched)
   GET  /api/risk-summary           — aggregated risk overview
   GET  /api/target-vs-actual       — target comparison
-  POST /api/analyse                — trigger AI analysis
+  GET  /api/insights               — full insight package (trends, forecasts, incidents)
+  POST /api/analyse                — trigger AI analysis (enriched context)
   POST /api/regenerate-data        — regenerate synthetic data
 """
 
@@ -28,6 +29,7 @@ import asyncio
 from data.generate_data import generate_all
 from backend.anomaly_engine import compute_anomalies, target_vs_actual, Anomaly
 from backend.ai_analyst import analyse
+from backend.insight_engine import build_insight_package
 
 app = FastAPI(title="InsightGuardAI", version="1.0.0")
 
@@ -60,6 +62,14 @@ def _load(domain: str) -> pd.DataFrame:
     df = pd.read_csv(path, parse_dates=["date"])
     df["date"] = df["date"].dt.strftime("%Y-%m-%d")
     return df
+
+
+def _get_domain_dfs() -> dict:
+    return {
+        "Finance":    _load("finance"),
+        "Operations": _load("operations"),
+        "Customer":   _load("customer"),
+    }
 
 
 def _get_all_anomalies() -> List[Anomaly]:
@@ -151,19 +161,61 @@ def get_target_vs_actual():
     return results
 
 
+@app.get("/api/insights")
+def get_insights():
+    """
+    Full insight package: enriched anomalies, trend alerts, forecast alerts,
+    consolidated incidents, and target gaps.
+    """
+    domain_dfs     = _get_domain_dfs()
+    base_anomalies = _get_all_anomalies()
+    tva            = []
+    for domain in ["finance", "operations"]:
+        tva.extend(target_vs_actual(_load(domain)))
+
+    pkg = build_insight_package(domain_dfs, base_anomalies, tva)
+
+    return {
+        "anomalies": [vars(a) for a in pkg.anomalies],
+        "trend_alerts": [vars(t) for t in pkg.trend_alerts],
+        "forecast_alerts": [vars(f) for f in pkg.forecast_alerts],
+        "incidents": [
+            {
+                "incident_id":      inc.incident_id,
+                "title":            inc.title,
+                "domain_tags":      inc.domain_tags,
+                "severity":         inc.severity,
+                "risk_score":       inc.risk_score,
+                "root_metrics":     inc.root_metrics,
+                "affected_metrics": inc.affected_metrics,
+                "causal_chain":     inc.causal_chain,
+                "recommendation":   inc.recommendation,
+                "anomaly_count":    len(inc.anomalies),
+                "trend_count":      len(inc.trend_alerts),
+            }
+            for inc in pkg.incidents
+        ],
+        "target_gaps":      pkg.target_gaps,
+        "domain_summaries": pkg.domain_summaries,
+    }
+
+
 class AnalyseRequest(BaseModel):
     top_n: int = 8
 
 
 @app.post("/api/analyse")
 async def run_analysis(req: AnalyseRequest):
-    anomalies = _get_all_anomalies()[:req.top_n]
-    summaries = {
-        "Finance":    _domain_summary("finance"),
-        "Operations": _domain_summary("operations"),
-        "Customer":   _domain_summary("customer"),
-    }
-    result = await analyse(anomalies, summaries)
+    domain_dfs     = _get_domain_dfs()
+    base_anomalies = _get_all_anomalies()
+    tva            = []
+    for domain in ["finance", "operations"]:
+        tva.extend(target_vs_actual(_load(domain)))
+
+    pkg = build_insight_package(domain_dfs, base_anomalies, tva)
+
+    # Pass enriched package to AI analyst
+    result = await analyse(pkg)
     return result
 
 
