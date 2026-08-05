@@ -1,6 +1,7 @@
 """
 Anomaly Detection Engine
-Uses Z-score + IQR methods to detect KPI anomalies and assign risk scores.
+Uses rolling Z-score to detect KPI anomalies and assign risk scores.
+The insight_engine module builds advanced enrichments on top of this output.
 """
 
 import pandas as pd

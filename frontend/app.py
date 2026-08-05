@@ -939,7 +939,7 @@ elif page == "AI Briefing":
     st.markdown("""
     <div class="page-header">
         <h1>AI Executive Briefing</h1>
-        <p>AI-powered root-cause analysis and recommended actions</p>
+        <p>AI-powered root-cause analysis with trend detection, forecasting and cross-domain incidents</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -948,44 +948,137 @@ elif page == "AI Briefing":
         run = st.button("Generate AI Briefing", type="primary", use_container_width=True)
     with col_info:
         st.caption(
-            "Analyses the top anomalies and produces an executive briefing. "
-            "Uses LLM API (Gemini) → Rule-based fallback."
+            "Analyses anomalies, sustained trends, 3-month forecasts and cross-domain incidents. "
+            "Uses Gemini API → Rule-based fallback."
         )
 
     if "ai_result" not in st.session_state:
         st.session_state.ai_result = None
+    if "insights_data" not in st.session_state:
+        st.session_state.insights_data = None
 
     if run:
-        with st.spinner("Analysing anomalies and generating briefing…"):
-            result = post("/api/analyse", {"top_n": 8})
+        with st.spinner("Running advanced analytics and generating briefing…"):
+            result   = post("/api/analyse", {"top_n": 8})
+            insights = fetch("/api/insights")
             if "error" not in result:
-                st.session_state.ai_result = result
+                st.session_state.ai_result    = result
+                st.session_state.insights_data = insights if not isinstance(insights, dict) or "error" not in insights else None
             else:
                 st.error(f"Analysis failed: {result['error']}")
 
     if st.session_state.ai_result:
-        r = st.session_state.ai_result
+        r        = st.session_state.ai_result
+        insights = st.session_state.insights_data or {}
+
+        # ── Source tag + summary counters ─────────────────────────────────────
         source_color = {
             "Gemini":     "#1d4ed8",
             "Rule-based": "#6b7280",
         }.get(r.get("source", ""), "#6b7280")
 
+        mc1, mc2, mc3, mc4 = st.columns(4)
+        anoms_all_raw = fetch("/api/anomalies?limit=100")
+        anoms_all     = anoms_all_raw if not isinstance(anoms_all_raw, dict) else []
+        with mc1:
+            st.metric("Anomalies Detected", len(anoms_all))
+        with mc2:
+            st.metric("Trend Deteriorations", r.get("trend_count", 0))
+        with mc3:
+            st.metric("Forecast Warnings", r.get("forecast_count", 0))
+        with mc4:
+            st.metric("Business Incidents", r.get("incident_count", 0))
+
         st.markdown(f"""
-        <div style="margin-bottom:16px;">
+        <div style="margin:14px 0 6px;">
             <span class="source-tag">
-                <span class="ms" style="font-size:1em;">bolt</span> Source: <strong style="color:{source_color};">{r.get('source','Unknown')}</strong>
+                <span class="ms" style="font-size:1em;">bolt</span>
+                Source: <strong style="color:{source_color};">{r.get('source','Unknown')}</strong>
             </span>
         </div>
         """, unsafe_allow_html=True)
 
-        # st.markdown(f'<div class="ai-card">', unsafe_allow_html=True)
+        # ── AI Briefing text ──────────────────────────────────────────────────
         st.markdown(r.get("text", "No analysis available."))
-        st.markdown("</div>", unsafe_allow_html=True)
 
+        # ── Consolidated Business Incidents ───────────────────────────────────
+        incidents = insights.get("incidents", [])
+        if incidents:
+            st.divider()
+            st.markdown('<p class="section-header">Consolidated Business Incidents</p>', unsafe_allow_html=True)
+            for inc in incidents:
+                sev   = inc.get("severity", "medium")
+                color = severity_color(sev)
+                roots   = ", ".join(inc.get("root_metrics", []))
+                effects = ", ".join(inc.get("affected_metrics", [])) or "—"
+                chain   = " → ".join(inc.get("causal_chain", [])) or "—"
+                st.markdown(f"""
+                <div class="alert-card alert-card-{sev}" style="margin-bottom:10px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span class="badge badge-{sev}">{sev.upper()}</span>
+                            <span style="font-size:1rem;font-weight:600;color:#0d1117;">{inc.get('title','')}</span>
+                            <span style="font-size:0.8rem;color:#9ca3af;">· {' & '.join(inc.get('domain_tags',[]))}</span>
+                        </div>
+                        <span style="font-size:0.9rem;font-weight:600;color:{color};">Risk {inc.get('risk_score',0)}/100</span>
+                    </div>
+                    <div style="font-size:0.9rem;color:#5c6370;margin-bottom:4px;">
+                        <strong style="color:#374151;">Root drivers:</strong> {roots} &nbsp;·&nbsp;
+                        <strong style="color:#374151;">Downstream:</strong> {effects}
+                    </div>
+                    <div style="font-size:0.85rem;color:#6b7280;margin-bottom:5px;">
+                        <strong style="color:#374151;">Causal chain:</strong> {chain}
+                    </div>
+                    <div style="font-size:0.85rem;color:#374151;background:#f8f9fb;padding:6px 10px;border-radius:5px;border:1px solid #e8eaed;">
+                        <span class="ms" style="font-size:0.9em;vertical-align:middle;">lightbulb</span>&nbsp;
+                        {inc.get('recommendation','')}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        # ── Trend Deteriorations ──────────────────────────────────────────────
+        trends = insights.get("trend_alerts", [])
+        if trends:
+            st.divider()
+            st.markdown('<p class="section-header">Trend Deteriorations</p>', unsafe_allow_html=True)
+            trend_df = pd.DataFrame([{
+                "Domain":       t["domain"],
+                "Metric":       t["metric_label"],
+                "Direction":    t["direction"].capitalize(),
+                "Periods":      t["consecutive_periods"],
+                "Total Change": f"{t['total_change_pct']:+.1f}%",
+                "Start → Latest": f"{t['start_value']}{t['unit']} → {t['latest_value']}{t['unit']}",
+                "Since":        t["start_date"],
+                "Severity":     t["severity"].upper(),
+            } for t in trends])
+            st.dataframe(trend_df, use_container_width=True, hide_index=True)
+
+        # ── Forecast Early Warnings ───────────────────────────────────────────
+        forecasts = insights.get("forecast_alerts", [])
+        if forecasts:
+            st.divider()
+            st.markdown('<p class="section-header">Forecast Early Warnings (3-month outlook)</p>', unsafe_allow_html=True)
+            for f in forecasts:
+                sev   = f.get("severity", "warning")
+                color = "#b91c1c" if sev == "critical" else "#b45309"
+                badge = "critical" if sev == "critical" else "high"
+                st.markdown(f"""
+                <div class="alert-card alert-card-{badge}" style="margin-bottom:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                        <span class="badge badge-{badge}">{sev.upper()}</span>
+                        <span style="font-size:0.95rem;font-weight:600;color:#0d1117;">
+                            {f['domain']} — {f['metric_label']}
+                        </span>
+                        <span style="font-size:0.8rem;color:#9ca3af;">by {f['projection_date']}</span>
+                    </div>
+                    <div style="font-size:0.9rem;color:#5c6370;">{f['message']}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        # ── Supporting Anomaly Data ───────────────────────────────────────────
         st.divider()
         st.markdown('<p class="section-header">Supporting Anomaly Data</p>', unsafe_allow_html=True)
-        anoms_all = fetch("/api/anomalies?limit=8")
-        if not isinstance(anoms_all, dict):
+        if anoms_all:
             supp_df = pd.DataFrame([{
                 "Domain":     a["domain"],
                 "Metric":     a["metric_label"],
@@ -993,10 +1086,8 @@ elif page == "AI Briefing":
                 "Severity":   a["severity"].upper(),
                 "Deviation":  f"{a['deviation_pct']:+.1f}%",
                 "Risk Score": a["risk_score"],
-            } for a in anoms_all])
+            } for a in anoms_all[:12]])
             st.dataframe(supp_df, use_container_width=True, hide_index=True)
-        else:
-            anoms_all = []
 
         # ── Export to PDF ─────────────────────────────────────────────────────
         st.divider()
@@ -1004,25 +1095,23 @@ elif page == "AI Briefing":
 
         export_col, _ = st.columns([1, 3])
         with export_col:
-            with st.spinner("Preparing PDF…"):
-                try:
-                    pdf_bytes = generate_pdf_report(
-                        briefing_text=r.get("text", ""),
-                        source=r.get("source", "Unknown"),
-                        anomalies=anoms_all if isinstance(anoms_all, list) else [],
-                    )
-                    filename = f"InsightGuardAI_Briefing_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
-                    st.download_button(
-                        label="Download PDF Report",
-                        data=pdf_bytes,
-                        file_name=filename,
-                        mime="application/pdf",
-                        use_container_width=True,
-                        type="primary",
-                    )
-                except Exception as e:
-                    st.error(f"PDF generation failed: {e}")
-
+            try:
+                pdf_bytes = generate_pdf_report(
+                    briefing_text=r.get("text", ""),
+                    source=r.get("source", "Unknown"),
+                    anomalies=anoms_all[:12],
+                )
+                filename = f"InsightGuardAI_Briefing_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+                st.download_button(
+                    label="Download PDF Report",
+                    data=pdf_bytes,
+                    file_name=filename,
+                    mime="application/pdf",
+                    use_container_width=True,
+                    type="primary",
+                )
+            except Exception as e:
+                st.error(f"PDF generation failed: {e}")
 
     else:
         st.info("Click **Generate AI Briefing** to run the analysis.")
