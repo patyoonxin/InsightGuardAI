@@ -2,6 +2,8 @@
 
 An executive early-warning dashboard that monitors KPIs across Finance, Operations, and Customer domains. It detects anomalies using statistical analysis, identifies sustained trends and cross-domain business incidents, forecasts near-term risks, and generates AI-powered briefings via the Gemini API.
 
+Live Demo: https://insightguardai-yoonxin.streamlit.app/
+
 ---
 
 ## Table of Contents
