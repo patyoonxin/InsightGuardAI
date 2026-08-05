@@ -11,6 +11,7 @@ from datetime import datetime
 import io
 import re
 import textwrap
+import os
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -23,7 +24,10 @@ from reportlab.platypus import (
 from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
 
 # ── Config ────────────────────────────────────────────────────────────────────
-API_BASE = "http://localhost:8000"
+API_BASE = os.getenv(
+    "API_URL",
+    "http://localhost:8000"
+)
 
 st.set_page_config(
     page_title="InsightGuardAI",
