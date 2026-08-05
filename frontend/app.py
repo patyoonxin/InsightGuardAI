@@ -632,7 +632,7 @@ def render_domain_page(domain_name: str):
 
     st.markdown(f"""
     <div class="page-header">
-        <h1>{cfg['icon']} {domain_name}</h1>
+        <h1>{domain_name}</h1>
         <p>KPI performance, trend analysis and anomaly detection</p>
     </div>
     """, unsafe_allow_html=True)
